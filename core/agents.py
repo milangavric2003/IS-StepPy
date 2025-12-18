@@ -155,12 +155,7 @@ class DFSAgent(Agent):
         return Path(nodes)
 
 
-class HeapNode:
-    def __init__(self, path: list[tuple[int, int]], cost: int):
-        self.path = path
-        self.cost = cost
-    def __lt__(self, other):
-        return self.cost < other.cost
+
 
 import heapq
 
@@ -169,30 +164,32 @@ class BranchAndBoundAgent(Agent):
     def __init__(self):
         super().__init__("BranchAndBound")
 
+    class HeapNode:
+        def __init__(self, path: list[tuple[int, int]], cost: int):
+            self.path = path
+            self.cost = cost
+
+        def __lt__(self, other):
+            if (self.cost == other.cost):
+                return len(self.path) < len(other.path)
+            return self.cost < other.cost
+
     def find_path(self, grid: Grid, start: tuple[int, int], goal: tuple[int, int]) -> Path:
         # raise NotImplementedError
-        # nodes: [start]
-        # paths: list[Node] = []
-        pathStart = HeapNode(path=[start], cost=0)
-        paths = [(0, pathStart, pathStart)]
+        pathStart = self.HeapNode(path=[start], cost=0)
+        paths = [pathStart]
         while paths:
-            _, _, curpath = heapq.heappop(paths)
-            if curpath.path[-1] == goal:
-                return Path(curpath.path)
+            cur_path = heapq.heappop(paths)
+            if cur_path.path[-1] == goal:
+                return Path(cur_path.path)
 
-            r, c = curpath.path[-1]
+            r, c = cur_path.path[-1]
             neighbors = grid.neighbors4(r, c)
-
-            # extended_paths = [
-            #     curpath.
-            #     tile for tile in neighbors
-            #     if tile.pos not in curpath
-            # ]
-            extended_paths = []
+            
             for neighbor in neighbors:
-                if neighbor.pos not in curpath.path:
-                    extended_path = HeapNode(path=curpath.path + [neighbor.pos], cost=curpath.cost + neighbor.cost)
-                    heapq.heappush(paths, (extended_path.cost, len(extended_path.path), extended_path))
+                if neighbor.pos not in cur_path.path:
+                    extended_path = self.HeapNode(path=cur_path.path + [neighbor.pos], cost=cur_path.cost + neighbor.cost)
+                    heapq.heappush(paths, extended_path)
 
         return Path([])
 
@@ -201,8 +198,40 @@ class AStar(Agent):
     def __init__(self):
         super().__init__("AStar")
 
+    class HeapNode:
+        def __init__(self, path: list[tuple[int, int]], cost: int, lastNodeCost: int):
+            self.path = path
+            self.cost = cost
+            self.lastNodeCost = lastNodeCost
+            self.cumulativeCost = cost + lastNodeCost
+
+        def __lt__(self, other):
+            if (self.cumulativeCost == other.cumulativeCost):
+                return len(self.path) < len(other.path)
+            return self.cumulativeCost < other.cumulativeCost
+
     def find_path(self, grid: Grid, start: tuple[int, int], goal: tuple[int, int]) -> Path:
-        raise NotImplementedError
+        # raise NotImplementedError
+        pathStart = self.HeapNode(path=[start], cost=0, lastNodeCost=0)
+        paths = [pathStart]
+        while paths:
+            cur_path = heapq.heappop(paths)
+            if cur_path.path[-1] == goal:
+                return Path(cur_path.path)
+
+            r, c = cur_path.path[-1]
+            neighbors = grid.neighbors4(r, c)
+
+            for neighbor in neighbors:
+                if neighbor.pos not in cur_path.path:
+                    extended_path = self.HeapNode(
+                        path=cur_path.path + [neighbor.pos],
+                        cost=cur_path.cost + neighbor.cost,
+                        lastNodeCost=grid.manhattan(neighbor.pos, goal)
+                    )
+                    heapq.heappush(paths, extended_path)
+
+        return Path([])
 
 
 AGENTS: dict[str, Callable[[], Agent]] = {
