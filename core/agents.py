@@ -155,6 +155,15 @@ class DFSAgent(Agent):
         return Path(nodes)
 
 
+class HeapNode:
+    def __init__(self, path: list[tuple[int, int]], cost: int):
+        self.path = path
+        self.cost = cost
+    def __lt__(self, other):
+        return self.cost < other.cost
+
+import heapq
+
 class BranchAndBoundAgent(Agent):
 
     def __init__(self):
@@ -162,38 +171,30 @@ class BranchAndBoundAgent(Agent):
 
     def find_path(self, grid: Grid, start: tuple[int, int], goal: tuple[int, int]) -> Path:
         # raise NotImplementedError
-        nodes: list[list[tuple[int, int]]] = [start]
-        seen = {start}
-        while nodes[-1] != goal:
-            r, c = nodes[-1]
+        # nodes: [start]
+        # paths: list[Node] = []
+        pathStart = HeapNode(path=[start], cost=0)
+        paths = [(0, pathStart, pathStart)]
+        while paths:
+            _, _, curpath = heapq.heappop(paths)
+            if curpath.path[-1] == goal:
+                return Path(curpath.path)
+
+            r, c = curpath.path[-1]
             neighbors = grid.neighbors4(r, c)
 
-            best_tiles = [
-                tile for tile in neighbors
-                if tile.pos not in seen
-            ]
-            if not best_tiles:
-                nodes.pop()
-                continue
+            # extended_paths = [
+            #     curpath.
+            #     tile for tile in neighbors
+            #     if tile.pos not in curpath
+            # ]
+            extended_paths = []
+            for neighbor in neighbors:
+                if neighbor.pos not in curpath.path:
+                    extended_path = HeapNode(path=curpath.path + [neighbor.pos], cost=curpath.cost + neighbor.cost)
+                    heapq.heappush(paths, (extended_path.cost, len(extended_path.path), extended_path))
 
-            direction_order = {
-                (0, 1): 0,  # istok
-                (1, 0): 1,  # jug
-                (0, -1): 2,  # zapad
-                (-1, 0): 3  # sever
-            }
-
-            best_tile = sorted(
-                best_tiles,
-                key=lambda t: (
-                    t.cost, direction_order[(t.pos[0] - r, t.pos[1] - c)]
-                )
-            )[0]
-
-            nodes.append(best_tile.pos)
-            seen.add(best_tile.pos)
-
-        return Path(nodes)
+        return Path([])
 
 class AStar(Agent):
 
