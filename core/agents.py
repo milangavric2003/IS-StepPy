@@ -46,81 +46,6 @@ class DFSAgent(Agent):
 
     def find_path(self, grid: Grid, start: tuple[int, int], goal: tuple[int, int]) -> Path:
         # raise NotImplementedError
-        # nodes = [start]
-        # seen = set([start])
-        # while nodes[-1] != goal:
-        #     r, c = nodes[-1]
-        #
-        #     neighbors = grid.neighbors4(r, c)
-        #
-        #     to_add = []
-        #     for x in neighbors:
-        #         if x.pos not in seen:
-        #             to_add.append(x)
-        #
-        #     if not to_add:
-        #         nodes.pop()
-        #         continue
-        #
-        #     direction_order = {
-        #         (0, 1): 0,  # istok
-        #         (1, 0): 1,  # jug
-        #         (0, -1): 2,  # zapad
-        #         (-1, 0): 3  # sever
-        #     }
-        #
-        #     to_add.sort(key=lambda t: (t.cost, direction_order[(t.pos[0] - r, t.pos[1] - c)]))
-        #     nodes.append(to_add[0].pos)
-        #     seen.add(to_add[0].pos)
-        #
-        # return Path(nodes)
-
-        # nodes = [start]
-        # visited = set([start])
-        #
-        # while nodes:
-        #     r, c = nodes[-1]
-        #
-        #     if (r, c) == goal:
-        #         return Path(nodes)
-        #
-        #     neighbors = grid.neighbors4(r, c)
-        #
-        #     # filtriraj neposjećene
-        #     to_add = []
-        #     for t in neighbors:
-        #         if t.pos not in visited:
-        #             to_add.append(t)
-        #
-        #     if not to_add:
-        #         # nema gde dalje → backtracking (DFS!)
-        #         nodes.pop()
-        #         continue
-        #
-        #     # sortiranje:
-        #     # 1) cost rastuće
-        #     # 2) smer: E, S, W, N
-        #     direction_order = {
-        #         (0, 1): 0,  # istok
-        #         (1, 0): 1,  # jug
-        #         (0, -1): 2,  # zapad
-        #         (-1, 0): 3  # sever
-        #     }
-        #
-        #     to_add.sort(
-        #         key=lambda t: (
-        #             t.cost,
-        #             direction_order[(t.pos[0] - r, t.pos[1] - c)]
-        #         ),
-        #         reverse=True  # reverse jer je DFS (stek)
-        #     )
-        #
-        #     next_tile = to_add.pop()
-        #     nodes.append(next_tile.pos)
-        #     visited.add(next_tile.pos)
-        #
-        # return Path([])
-
         nodes = [start]
         seen = {start}
         while nodes[-1] != goal:
@@ -154,9 +79,6 @@ class DFSAgent(Agent):
 
         return Path(nodes)
 
-
-
-
 import heapq
 
 class BranchAndBoundAgent(Agent):
@@ -178,6 +100,7 @@ class BranchAndBoundAgent(Agent):
         # raise NotImplementedError
         pathStart = self.HeapNode(path=[start], cost=0)
         paths = [pathStart]
+        best_cost = {start: 0}
         while paths:
             cur_path = heapq.heappop(paths)
             if cur_path.path[-1] == goal:
@@ -187,9 +110,13 @@ class BranchAndBoundAgent(Agent):
             neighbors = grid.neighbors4(r, c)
             
             for neighbor in neighbors:
-                if neighbor.pos not in cur_path.path:
+                new_cost = neighbor.cost + cur_path.cost
+                #if neighbor.pos not in cur_path.path:
+                if new_cost < best_cost.get(neighbor.pos, float('inf')):
+                    best_cost[neighbor.pos] = new_cost
                     extended_path = self.HeapNode(path=cur_path.path + [neighbor.pos], cost=cur_path.cost + neighbor.cost)
                     heapq.heappush(paths, extended_path)
+
 
         return Path([])
 
@@ -214,6 +141,7 @@ class AStar(Agent):
         # raise NotImplementedError
         pathStart = self.HeapNode(path=[start], cost=0, lastNodeCost=0)
         paths = [pathStart]
+        best_cost = {start: 0}
         while paths:
             cur_path = heapq.heappop(paths)
             if cur_path.path[-1] == goal:
@@ -223,7 +151,10 @@ class AStar(Agent):
             neighbors = grid.neighbors4(r, c)
 
             for neighbor in neighbors:
-                if neighbor.pos not in cur_path.path:
+                new_cost = neighbor.cost + cur_path.cost
+                #if neighbor.pos not in cur_path.path:
+                if new_cost < best_cost.get(neighbor.pos, float('inf')):
+                    best_cost[neighbor.pos] = new_cost
                     extended_path = self.HeapNode(
                         path=cur_path.path + [neighbor.pos],
                         cost=cur_path.cost + neighbor.cost,
